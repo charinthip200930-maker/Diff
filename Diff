@@ -1,0 +1,283 @@
+-- ============================================
+-- Doofus Jerry Script (ภาษาไทย / โทนสีเขียวเข้ม)
+-- ============================================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- สถานะของฟังก์ชันต่างๆ
+local Config = {
+    Noclip = false,
+    WalkSpeed = 16,
+    InfiniteJump = false,
+    HighJump = false,
+    JumpPower = 50,
+    ESP = false,
+    AutoClicker = false,
+    AirWalk = false
+}
+
+-- สร้าง GUI หน้าต่างหลัก
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local Container = Instance.new("ScrollingFrame")
+local UIListLayout = Instance.new("UIListLayout")
+
+ScreenGui.Name = "DoofusJerryGui"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+-- ตกแต่งหน้าต่างหลัก (สีเขียวเข้ม)
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 45, 20) -- เขียวเข้มจัด
+MainFrame.BorderColor3 = Color3.fromRGB(40, 160, 60)   -- ขอบเขียวสว่าง
+MainFrame.BorderSizePixel = 2
+MainFrame.Position = UDim2.new(0.3, 0, 0.2, 0)
+MainFrame.Size = UDim2.new(0, 320, 0, 420)
+MainFrame.Active = true
+MainFrame.Draggable = true -- สามารถลากเปลี่ยนตำแหน่งบนจอได้
+
+Title.Name = "Title"
+Title.Parent = MainFrame
+Title.BackgroundColor3 = Color3.fromRGB(10, 30, 15)
+Title.BorderSizePixel = 0
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Font = Enum.Font.SourceSansBold
+Title.Text = "Doofus Jerry Menu"
+Title.TextColor3 = Color3.fromRGB(80, 255, 120) -- ตัวหนังสือเขียวพาสเทล
+Title.TextSize = 20.000
+
+Container.Name = "Container"
+Container.Parent = MainFrame
+Container.BackgroundTransparency = 1
+Container.Position = UDim2.new(0, 10, 0, 50)
+Container.Size = UDim2.new(1, -20, 1, -60)
+Container.CanvasSize = UDim2.new(0, 0, 0, 450)
+Container.ScrollBarThickness = 6
+
+UIListLayout.Parent = Container
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 8)
+
+-- ฟังก์ชันสร้างปุ่มเปิด/ปิด (Toggle Button)
+local function CreateToggle(text, callback)
+    local Button = Instance.new("TextButton")
+    Button.Parent = Container
+    Button.Size = UDim2.new(1, 0, 0, 35)
+    Button.BackgroundColor3 = Color3.fromRGB(25, 65, 35)
+    Button.BorderColor3 = Color3.fromRGB(40, 120, 50)
+    Button.Font = Enum.Font.SourceSansBold
+    Button.Text = text .. " : [ปิด]"
+    Button.TextColor3 = Color3.fromRGB(220, 220, 220)
+    Button.TextSize = 16
+
+    local state = false
+    Button.MouseButton1Click:Connect(function()
+        state = not state
+        if state then
+            Button.Text = text .. " : [เปิด]"
+            Button.BackgroundColor3 = Color3.fromRGB(40, 120, 50)
+            Button.TextColor3 = Color3.fromRGB(100, 255, 150)
+        else
+            Button.Text = text .. " : [ปิด]"
+            Button.BackgroundColor3 = Color3.fromRGB(25, 65, 35)
+            Button.TextColor3 = Color3.fromRGB(220, 220, 220)
+        end
+        callback(state)
+    end)
+end
+
+-- ฟังก์ชันสร้างช่องกรอกตัวเลข (Input Box)
+local function CreateInput(text, defaultVal, callback)
+    local Frame = Instance.new("Frame")
+    Frame.Parent = Container
+    Frame.Size = UDim2.new(1, 0, 0, 35)
+    Frame.BackgroundColor3 = Color3.fromRGB(25, 65, 35)
+    Frame.BorderColor3 = Color3.fromRGB(40, 120, 50)
+
+    local Label = Instance.new("TextLabel")
+    Label.Parent = Frame
+    Label.Size = UDim2.new(0.65, 0, 1, 0)
+    Label.BackgroundTransparency = 1
+    Label.Font = Enum.Font.SourceSansBold
+    Label.Text = " " .. text
+    Label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    Label.TextSize = 15
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+
+    local Box = Instance.new("TextBox")
+    Box.Parent = Frame
+    Box.Position = UDim2.new(0.65, 0, 0.15, 0)
+    Box.Size = UDim2.new(0.3, 0, 0.7, 0)
+    Box.BackgroundColor3 = Color3.fromRGB(10, 35, 15)
+    Box.BorderColor3 = Color3.fromRGB(50, 150, 70)
+    Box.Font = Enum.Font.SourceSans
+    Box.Text = tostring(defaultVal)
+    Box.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Box.TextSize = 14
+
+    Box.FocusLost:Connect(function()
+        local num = tonumber(Box.Text)
+        if num then
+            callback(num)
+        else
+            Box.Text = tostring(defaultVal)
+        end
+    end)
+end
+
+-- ============================================
+-- ระบบฟังก์ชันการทำงาน (Logic)
+-- ============================================
+
+-- 1. เดินทะลุกำแพง (Noclip)
+CreateToggle("1. เดินทะลุกำแพง", function(state)
+    Config.Noclip = state
+end)
+
+RunService.Stepped:Connect(function()
+    if Config.Noclip and LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- 2. ความเร็วในการเดิน (WalkSpeed 1-1000)
+CreateInput("2. ความเร็วเดิน (1-1000)", 16, function(value)
+    Config.WalkSpeed = math.clamp(value, 1, 1000)
+end)
+
+RunService.RenderStepped:Connect(function()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = Config.WalkSpeed
+    end
+end)
+
+-- 3. กระโดดไม่จำกัด (Infinite Jump)
+CreateToggle("3. กระโดดไม่จำกัด", function(state)
+    Config.InfiniteJump = state
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if Config.InfiniteJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+-- 4. กระโดดสูง (High Jump)
+CreateToggle("4. กระโดดสูง", function(state)
+    Config.HighJump = state
+end)
+
+CreateInput("   -> ความสูงกระโดด", 100, function(value)
+    Config.JumpPower = value
+end)
+
+RunService.RenderStepped:Connect(function()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if Config.HighJump then
+            hum.UseJumpPower = true
+            hum.JumpPower = Config.JumpPower
+        end
+    end
+end)
+
+-- 5. มองเห็นทุกคนและเห็นชื่อผู้เล่น (ESP Name Tags)
+CreateToggle("5. มองเห็นคนและชื่อ (ESP)", function(state)
+    Config.ESP = state
+    if not state then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p.Character and p.Character:FindFirstChild("DoofusESP") then
+                p.Character.DoofusESP:Destroy()
+            end
+        end
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if Config.ESP then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+                if not player.Character:FindFirstChild("DoofusESP") then
+                    local bgui = Instance.new("BillboardGui")
+                    bgui.Name = "DoofusESP"
+                    bgui.Parent = player.Character
+                    bgui.Adornee = player.Character.Head
+                    bgui.AlwaysOnTop = true
+                    bgui.Size = UDim2.new(0, 100, 0, 30)
+                    bgui.StudsOffset = Vector3.new(0, 3, 0)
+
+                    local lbl = Instance.new("TextLabel")
+                    lbl.Parent = bgui
+                    lbl.Size = UDim2.new(1, 0, 1, 0)
+                    lbl.BackgroundTransparency = 1
+                    lbl.Text = player.Name
+                    lbl.TextColor3 = Color3.fromRGB(50, 255, 100) -- ชื่อสีเขียวสว่าง
+                    lbl.TextStrokeTransparency = 0
+                    lbl.TextSize = 14
+                    lbl.Font = Enum.Font.SourceSansBold
+                end
+            end
+        end
+    end
+end)
+
+-- 6. กดปุ่มค้างให้เป็นทีเดียว/กดรัว (Auto Clicker)
+CreateToggle("6. กดปุ่มค้างให้คลิกรัว", function(state)
+    Config.AutoClicker = state
+end)
+
+local isMouseDown = false
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        isMouseDown = true
+        while isMouseDown and Config.AutoClicker do
+            mouse1click()
+            task.wait(0.05)
+        end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        isMouseDown = false
+    end
+end)
+
+-- 7. เดินบนอากาศเมื่อตกแมพ (Air Walk / Anti-Fall)
+local airPart = nil
+CreateToggle("7. เดินบนอากาศ (กันตกแมพ)", function(state)
+    Config.AirWalk = state
+    if not state and airPart then
+        airPart:Destroy()
+        airPart = nil
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if Config.AirWalk and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = LocalPlayer.Character.HumanoidRootPart
+        if not airPart then
+            airPart = Instance.new("Part")
+            airPart.Size = Vector3.new(15, 1, 15)
+            airPart.Anchored = true
+            airPart.Transparency = 0.5
+            airPart.Color = Color3.fromRGB(0, 100, 40)
+            airPart.Material = Enum.Material.Neon
+            airPart.Parent = workspace
+        end
+        airPart.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y - 3.5, hrp.Position.Z)
+    elseif not Config.AirWalk and airPart then
+        airPart:Destroy()
+        airPart = nil
+    end
+end)
